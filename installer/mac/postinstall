@@ -1,0 +1,21 @@
+#!/bin/bash
+# Copies the module into Companion's modules folder of the user at the Mac
+# (~/Library/Application Support/companion/modules), where Companion looks for installed
+# modules when it starts. The package itself only installs into STAGE.
+VERSION="__VERSION__"
+STAGE="/Library/Application Support/Waves LV1 Companion Beta/waves-lv1-$VERSION"
+
+USER_AT_MAC=$(stat -f%Su /dev/console)
+if [ -z "$USER_AT_MAC" ] || [ "$USER_AT_MAC" = "root" ]; then
+	echo "No user logged in at the Mac: nothing copied" >&2
+	exit 0
+fi
+HOME_AT_MAC=$(dscl . -read "/Users/$USER_AT_MAC" NFSHomeDirectory | awk '{print $2}')
+DEST="$HOME_AT_MAC/Library/Application Support/companion/modules/waves-lv1-$VERSION"
+
+# As that user, so Companion owns every folder it may later write into.
+sudo -u "$USER_AT_MAC" mkdir -p "$(dirname "$DEST")"
+sudo -u "$USER_AT_MAC" rm -rf "$DEST"
+sudo -u "$USER_AT_MAC" ditto "$STAGE" "$DEST"
+echo "Installed into $DEST"
+exit 0

@@ -1,0 +1,32 @@
+# Builds the macOS installer for a release from its module package (waves-lv1-<version>.tgz)
+# and attaches it to that release.
+name: macOS installer
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (e.g. v2.1.0-beta.1)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  pkg:
+    runs-on: macos-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the module package
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'waves-lv1-*.tgz' --dir in
+      - name: Build the .pkg
+        run: |
+          chmod +x installer/mac/build_pkg.sh
+          installer/mac/build_pkg.sh in/waves-lv1-*.tgz out
+      - name: Attach it to the release
+        run: gh release upload "$TAG" out/*.pkg --repo "$GITHUB_REPOSITORY" --clobber
